@@ -45,25 +45,25 @@ if __name__ == '__main__':
     if not os.path.exists('data/{}'.format(sequence_id)):
         os.makedirs('data/{}'.format(sequence_id))
 
-    # header = {'Authorization' : 'OAuth {}'.format(access_token)}
-    # url = 'https://graph.mapillary.com/image_ids?sequence_id={}'.format(sequence_id)
-    # r = requests.get(url, headers=header)
-    # data = r.json()
+    header = {'Authorization' : 'OAuth {}'.format(access_token)}
+    url = 'https://graph.mapillary.com/image_ids?sequence_id={}'.format(sequence_id)
+    r = requests.get(url, headers=header)
+    data = r.json()
 
-    # image_ids = data['data']
-    # img_num = len(image_ids)
-    # urls = []
-    # print(img_num)
-    # print('getting urls')
-    # for x in range(0, img_num):
-    #     image_id = image_ids[x]['id']
-    #     req_url = 'https://graph.mapillary.com/{}?fields=thumb_2048_url'.format(image_id)
-    #     r = requests.get(req_url, headers=header)
-    #     data = r.json()
-    #     print('getting url {} of {}'.format(x, img_num))
-    #     urls.append(data['thumb_2048_url'])
+    image_ids = data['data']
+    img_num = len(image_ids)
+    urls = []
+    print(img_num)
+    print('getting urls')
+    for x in range(0, img_num):
+        image_id = image_ids[x]['id']
+        req_url = 'https://graph.mapillary.com/{}?fields=thumb_2048_url'.format(image_id)
+        r = requests.get(req_url, headers=header)
+        data = r.json()
+        print('getting url {} of {}'.format(x, img_num))
+        urls.append(data['thumb_2048_url'])
 
-    # print('downloading.. this process will take a while. please wait')
-    # for i,url in enumerate(urls):
-    #     path = 'data/{}/{}.jpg'.format(sequence_id, i)
-    #     download(url,path)
+    print('downloading.. this process will take a while. please wait')
+    for i,url in enumerate(urls):
+        path = 'data/{}/{}.jpg'.format(sequence_id, i)
+        download(url,path)
