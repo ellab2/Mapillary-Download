@@ -4,6 +4,7 @@ import os
 import asyncio
 import argparse
 from datetime import datetime
+from lib.exif_write import ExifEdit
 
 def parse_args(argv =None):
     parser = argparse.ArgumentParser()
@@ -18,12 +19,48 @@ def background(f):
         return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
     return wrapped
 
-@background
-def download(url, fn):
+#@background
+def download(url, fn, metadata=None):
   r = requests.get(url, stream=True)
   with open(str(fn), "wb") as f:
     f.write(r.content)
+  write_exif(fn, metadata)
 
+def write_exif(filename, data):
+    '''
+    Write exif metadata
+    '''
+    #{'thumb_original_url': 'https://scontent-cdg4-2.xx.fbcdn.net/m1/v/t6/An9Zy2SrH9vXJIF01QkBODyUbg7XSKfwL48UwHyvihSwvECGjVbG0vSw9uhxe2-Dq-k2eUcigb83buO6zo-7eVbykfp5aQIe1kgd-MJr66nU_H-o_mwBLZXgVbj5I_5WX-C9c6FxJruHkV962F228O0?ccb=10-5&oh=00_AfDOKD869DxL-4ZNCbVo8Rn29vsc0JyjMAU2ctx4aAFVMQ&oe=65256C25&_nc_sid=201bca',
+    #  'captured_at': 1603459736644, 'geometry': {'type': 'Point', 'coordinates': [2.5174596904057, 48.777089857534]}, 'id': '485924785946693'}
+    lat = data['geometry']['coordinates'][1]
+    long = data['geometry']['coordinates'][0]
+    altitude = data['altitude']
+    bearing = data['compass_angle']
+    timestamp=datetime.utcfromtimestamp(int(data['captured_at'])/1000)
+    metadata = metadata = ExifEdit(filename)
+    
+    #metadata.read()
+    
+    try:
+                
+            # add to exif
+        #metadata["Exif.GPSInfo.GPSLatitude"] = exiv_lat
+        #metadata["Exif.GPSInfo.GPSLatitudeRef"] = coordinates[3]
+        #metadata["Exif.GPSInfo.GPSLongitude"] = exiv_lon
+        #metadata["Exif.GPSInfo.GPSLongitudeRef"] = coordinates[7]
+        #metadata["Exif.GPSInfo.GPSMapDatum"] = "WGS-84"
+        #metadata["Exif.GPSInfo.GPSVersionID"] = '2 0 0 0'
+        #metadata["Exif.GPSInfo.GPSImgDirection"] = exiv_bearing
+        #metadata["Exif.GPSInfo.GPSImgDirectionRef"] = "T"
+        
+        metadata.add_lat_lon(lat, long)
+        metadata.add_altitude(altitude)
+        metadata.add_date_time_original(timestamp)
+        metadata.add_direction(bearing)
+        metadata.write()
+        print("Added geodata to: {0}".format(filename))
+    except ValueError as e:
+        print("Skipping {0}: {1}".format(filename, e))
 if __name__ == '__main__':
     parse_args()
 
@@ -62,10 +99,10 @@ if __name__ == '__main__':
         r = requests.get(req_url, headers=header)
         data = r.json()
         print('getting url {} of {}'.format(x, img_num))
+        #print(data['geometry']['coordinates'][1], data['geometry']['coordinates'][0])
         urls.append(data)
 
     print('downloading.. this process will take a while. please wait')
     for i,url in enumerate(urls):
         path = 'data/{}/{}.jpg'.format(sequence_id, datetime.utcfromtimestamp(int(url['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%S.%f'))
-        print(path)
-        download(url['thumb_original_url'],path)
+        download(url['thumb_original_url'],path, url)
