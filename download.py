@@ -3,6 +3,7 @@ import json
 import os
 import asyncio
 import argparse
+from datetime import datetime
 
 def parse_args(argv =None):
     parser = argparse.ArgumentParser()
@@ -57,13 +58,14 @@ if __name__ == '__main__':
     print('getting urls')
     for x in range(0, img_num):
         image_id = image_ids[x]['id']
-        req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url'.format(image_id)
+        req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
         r = requests.get(req_url, headers=header)
         data = r.json()
         print('getting url {} of {}'.format(x, img_num))
-        urls.append(data['thumb_original_url'])
+        urls.append(data)
 
     print('downloading.. this process will take a while. please wait')
     for i,url in enumerate(urls):
-        path = 'data/{}/{}.jpg'.format(sequence_id, i)
-        download(url,path)
+        path = 'data/{}/{}.jpg'.format(sequence_id, datetime.utcfromtimestamp(int(url['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%S.%f'))
+        print(path)
+        download(url['thumb_original_url'],path)
