@@ -57,11 +57,11 @@ if __name__ == '__main__':
     print('getting urls')
     for x in range(0, img_num):
         image_id = image_ids[x]['id']
-        req_url = 'https://graph.mapillary.com/{}?fields=thumb_2048_url'.format(image_id)
+        req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url'.format(image_id)
         r = requests.get(req_url, headers=header)
         data = r.json()
         print('getting url {} of {}'.format(x, img_num))
-        urls.append(data['thumb_2048_url'])
+        urls.append(data['thumb_original_url'])
 
     print('downloading.. this process will take a while. please wait')
     for i,url in enumerate(urls):
