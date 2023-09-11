@@ -57,10 +57,20 @@ def write_exif(filename, data):
         metadata.add_altitude(altitude)
         metadata.add_date_time_original(timestamp)
         metadata.add_direction(bearing)
+        #if data['camera_type'] == 'spherical'
         metadata.write()
         print("Added geodata to: {0}".format(filename))
     except ValueError as e:
         print("Skipping {0}: {1}".format(filename, e))
+    
+    if data['camera_type'] == 'spherical' :
+        print('Pano detected')
+        import pyexiv2
+        img = pyexiv2.Image(filename)
+        xmp_pano = {'Xmp.GPano.ProjectionType' : 'Equirectangular'}
+        img.modify_xmp(xmp_pano)
+        img.close()
+
 if __name__ == '__main__':
     parse_args()
 
@@ -94,12 +104,13 @@ if __name__ == '__main__':
     print(img_num)
     print('getting urls')
     for x in range(0, img_num):
+    #for x in range(0, 5):        
         image_id = image_ids[x]['id']
         req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
         r = requests.get(req_url, headers=header)
         data = r.json()
         print('getting url {} of {}'.format(x, img_num))
-        #print(data['geometry']['coordinates'][1], data['geometry']['coordinates'][0])
+        #print(data)
         urls.append(data)
 
     print('downloading.. this process will take a while. please wait')
