@@ -1,3 +1,4 @@
 data/*
 lib/__pycache__/
 lib/test
+__pycache__/
