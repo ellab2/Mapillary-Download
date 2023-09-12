@@ -2,7 +2,7 @@
 from typing import Optional, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass
-from geopic_tag_reader.model import PictureType
+from model import PictureType
 
 try:
     import pyexiv2  # type: ignore
@@ -26,6 +26,7 @@ class PictureMetadata:
     altitude: Optional[float] = None
     picture_type: Optional[PictureType] = None
     direction: Optional[float] = None
+    orientation: Optional[int] = 1
 
 
 def writePictureMetadata(picture: bytes, metadata: PictureMetadata) -> bytes:
@@ -42,7 +43,7 @@ def writePictureMetadata(picture: bytes, metadata: PictureMetadata) -> bytes:
 
     if metadata.capture_time:
         if metadata.capture_time.utcoffset() is None:
-            metadata.capture_time = localize(metadata.capture_time, img)
+            metadata.capture_time = localize(metadata, img)
 
         # for capture time, override GPSInfo time and DatetimeOriginal
         updated_exif["Exif.Photo.DateTimeOriginal"] = metadata.capture_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -73,6 +74,44 @@ def writePictureMetadata(picture: bytes, metadata: PictureMetadata) -> bytes:
     return img.get_bytes()
 
 
+def add_altitude(picture: bytes, metadata: PictureMetadata, precision: int = 1000) -> bytes:
+    """
+    Add altitude value in GPSAltitude and GPSAltitudeRef
+    """
+    altitude = metadata.altitude
+    img = pyexiv2.ImageData(picture)
+    updated_exif = {}
+
+    if metadata.altitude is not None:
+        negative_altitude = '0' if altitude >= 0 else '1'
+        updated_exif['Exif.GPSInfo.GPSAltitude'] = f"{int(abs(altitude * precision))} / {precision}"
+        updated_exif['Exif.GPSInfo.GPSAltitudeRef'] = negative_altitude
+
+    if updated_exif:
+        img.modify_exif(updated_exif)
+
+    return img.get_bytes()
+
+
+def add_direction(picture: bytes, metadata: PictureMetadata, ref: str = 'T', precision: int = 1000) -> bytes:
+    """
+    Add direction value in GPSImgDirection and GPSImgDirectionRef
+    """
+    direction = metadata.direction
+    img = pyexiv2.ImageData(picture)
+    updated_exif = {}
+
+    if metadata.direction is not None:
+        updated_exif['Exif.GPSInfo.GPSImgDirection'] = f"{int(abs(direction % 360.0 * precision))} / {precision}"
+        updated_exif['Exif.GPSInfo.GPSImgDirectionRef'] = ref
+
+    if updated_exif:
+        img.modify_exif(updated_exif)
+        print(updated_exif)
+
+    return img.get_bytes()
+
+
 def format_offset(offset: timedelta) -> str:
     """Format offset for OffsetTimeOriginal. Format is like "+02:00" for paris offset
     >>> format_offset(timedelta(hours=5, minutes=45))
@@ -84,30 +123,30 @@ def format_offset(offset: timedelta) -> str:
     return f"{'+' if offset_hour >= 0 else '-'}{int(abs(offset_hour)):02}:{int(remainer/60):02}"
 
 
-def localize(dt: datetime, metadata: pyexiv2.ImageData) -> datetime:
+def localize(metadata: PictureMetadata, imagedata: pyexiv2.ImageData) -> datetime:
     """
     Localize a datetime in the timezone of the picture
     If the picture does not contains GPS position, the datetime will not be modified.
     """
-    exif = metadata.read_exif()
-    lon = exif["Exif.GPSInfo.GPSLongitude"]
-    lon_ref = exif.get("Exif.GPSInfo.GPSLongitudeRef", "E")
-    lat = exif["Exif.GPSInfo.GPSLatitude"]
-    lat_ref = exif.get("Exif.GPSInfo.GPSLatitudeRef", "N")
-
-    if not lon or not lat:
-        return dt  # canot localize, returning same date
+    exif = imagedata.read_exif()
+    try:
+        lon = exif["Exif.GPSInfo.GPSLongitude"]
+        lon_ref = exif.get("Exif.GPSInfo.GPSLongitudeRef", "E")
+        lat = exif["Exif.GPSInfo.GPSLatitude"]
+        lat_ref = exif.get("Exif.GPSInfo.GPSLatitudeRef", "N")
+    except KeyError:
+        return metadata.capture_time # canot localize, returning same date 
 
     lon = _from_dms(lon) * (1 if lon_ref == "E" else -1)
     lat = _from_dms(lat) * (1 if lat_ref == "N" else -1)
 
     tz_name = tz_finder.timezone_at(lng=lon, lat=lat)
     if not tz_name:
-        return dt  # cannot find timezone, returning same date
+        return metadata.capture_time  # cannot find timezone, returning same date
 
     tz = pytz.timezone(tz_name)
-
-    return tz.localize(dt)
+    
+    return tz.localize(metadata.capture_time)
 
 
 def _from_dms(val: str) -> float:
