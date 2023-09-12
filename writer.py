@@ -38,6 +38,7 @@ def writePictureMetadata(picture: bytes, metadata: PictureMetadata) -> bytes:
 
     if metadata.capture_time:
         picture = add_gps_datetime(picture, metadata)
+        picture = add_datetimeoriginal(picture, metadata)
 
     if metadata.latitude is not None and metadata.longitude is not None:
         picture = add_lat_lon(picture, metadata)
@@ -86,6 +87,25 @@ def add_altitude(picture: bytes, metadata: PictureMetadata, precision: int = 100
 
     return img.get_bytes()
 
+
+def add_direction(picture: bytes, metadata: PictureMetadata, ref: str = 'T', precision: int = 1000) -> bytes:
+    """
+    Add direction value in GPSImgDirection and GPSImgDirectionRef
+    """
+    direction = metadata.direction
+    img = pyexiv2.ImageData(picture)
+    updated_exif = {}
+
+    if metadata.direction is not None:
+        updated_exif['Exif.GPSInfo.GPSImgDirection'] = f"{int(abs(direction % 360.0 * precision))} / {precision}"
+        updated_exif['Exif.GPSInfo.GPSImgDirectionRef'] = ref
+
+    if updated_exif:
+        img.modify_exif(updated_exif)
+
+    return img.get_bytes()
+
+
 def add_gps_datetime(picture: bytes, metadata: PictureMetadata) -> bytes:
     """
     Add GPSDateStamp and GPSTimeStamp
@@ -111,18 +131,24 @@ def add_gps_datetime(picture: bytes, metadata: PictureMetadata) -> bytes:
 
     return img.get_bytes()
     
-def add_direction(picture: bytes, metadata: PictureMetadata, ref: str = 'T', precision: int = 1000) -> bytes:
+def add_datetimeoriginal(picture: bytes, metadata: PictureMetadata) -> bytes:
     """
-    Add direction value in GPSImgDirection and GPSImgDirectionRef
+    Add date time in Exif DateTimeOriginal and SubSecTimeOriginal tags
     """
-    direction = metadata.direction
     img = pyexiv2.ImageData(picture)
     updated_exif = {}
 
-    if metadata.direction is not None:
-        updated_exif['Exif.GPSInfo.GPSImgDirection'] = f"{int(abs(direction % 360.0 * precision))} / {precision}"
-        updated_exif['Exif.GPSInfo.GPSImgDirectionRef'] = ref
+    if metadata.capture_time.utcoffset() is None:
+        metadata.capture_time = localize(metadata, img)
 
+        # for capture time, override DatetimeOriginal and SubSecTimeOriginal
+        updated_exif["Exif.Photo.DateTimeOriginal"] = metadata.capture_time.strftime("%Y:%m:%d %H:%M:%S")
+        offset = metadata.capture_time.utcoffset()
+        if offset is not None:
+            updated_exif["Exif.Photo.OffsetTimeOriginal"] = format_offset(offset)
+        if metadata.capture_time.microsecond != 0:
+            updated_exif["Exif.Photo.SubSecTimeOriginal"] = metadata.capture_time.strftime("%f")
+    
     if updated_exif:
         img.modify_exif(updated_exif)
 
