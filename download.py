@@ -4,7 +4,6 @@ import os
 import asyncio
 import argparse
 from datetime import datetime
-from lib.exif_write import ExifEdit
 import writer
 from model import PictureType
 

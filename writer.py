@@ -82,8 +82,8 @@ def add_altitude(picture: bytes, metadata: PictureMetadata, precision: int = 100
     img = pyexiv2.ImageData(picture)
     updated_exif = {}
 
-    if metadata.altitude is not None:
-        negative_altitude = '0' if altitude >= 0 else '1'
+    if altitude is not None:
+        negative_altitude = 0 if altitude >= 0 else 1
         updated_exif['Exif.GPSInfo.GPSAltitude'] = f"{int(abs(altitude * precision))} / {precision}"
         updated_exif['Exif.GPSInfo.GPSAltitudeRef'] = negative_altitude
 
@@ -107,7 +107,6 @@ def add_direction(picture: bytes, metadata: PictureMetadata, ref: str = 'T', pre
 
     if updated_exif:
         img.modify_exif(updated_exif)
-        print(updated_exif)
 
     return img.get_bytes()
 
