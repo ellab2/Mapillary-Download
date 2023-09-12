@@ -135,7 +135,7 @@ def add_img_projection(picture: bytes, metadata: PictureMetadata) -> bytes:
     img = pyexiv2.ImageData(picture)
     updated_xmp = {}
 
-    if metadata.picture_type is not None:
+    if metadata.picture_type.value != "flat":
         updated_xmp["Xmp.GPano.ProjectionType"] = metadata.picture_type.value
         updated_xmp["Xmp.GPano.UsePanoramaViewer"] = True
 
