@@ -36,24 +36,24 @@ def writePictureMetadata(picture: bytes, metadata: PictureMetadata) -> bytes:
     if not metadata.capture_time and not metadata.longitude and not metadata.latitude and not metadata.picture_type:
         return picture
 
+    if metadata.capture_time:
+        picture = add_gps_datetime(picture, metadata)
+
+    if metadata.latitude is not None and metadata.longitude is not None:
+        picture = add_lat_lon(picture, metadata)
+
+    if metadata.picture_type is not None:
+        picture = add_img_projection(picture, metadata)
+
+    return picture
+
+def add_lat_lon(picture: bytes, metadata: PictureMetadata) -> bytes:
+    """
+    Add latitude and longitude values in GPSLatitude + GPSLAtitudeRef and GPSLongitude + GPSLongitudeRef
+    """
     img = pyexiv2.ImageData(picture)
 
     updated_exif = {}
-    updated_xmp = {}
-
-    if metadata.capture_time:
-        if metadata.capture_time.utcoffset() is None:
-            metadata.capture_time = localize(metadata, img)
-
-        # for capture time, override GPSInfo time and DatetimeOriginal
-        updated_exif["Exif.Photo.DateTimeOriginal"] = metadata.capture_time.strftime("%Y-%m-%d %H:%M:%S")
-        offset = metadata.capture_time.utcoffset()
-        if offset is not None:
-            updated_exif["Exif.Photo.OffsetTimeOriginal"] = format_offset(offset)
-
-        utc_dt = metadata.capture_time.astimezone(tz=pytz.UTC)
-        updated_exif["Exif.GPSInfo.GPSDateStamp"] = utc_dt.strftime("%Y-%m-%d")
-        updated_exif["Exif.GPSInfo.GPSTimeStamp"] = utc_dt.strftime("%H/1 %M/1 %S/1")
 
     if metadata.latitude is not None:
         updated_exif["Exif.GPSInfo.GPSLatitudeRef"] = "N" if metadata.latitude > 0 else "S"
@@ -62,17 +62,11 @@ def writePictureMetadata(picture: bytes, metadata: PictureMetadata) -> bytes:
     if metadata.longitude is not None:
         updated_exif["Exif.GPSInfo.GPSLongitudeRef"] = "E" if metadata.longitude > 0 else "W"
         updated_exif["Exif.GPSInfo.GPSLongitude"] = _to_exif_dms(metadata.longitude)
-
-    if metadata.picture_type is not None:
-        updated_xmp["Xmp.GPano.ProjectionType"] = metadata.picture_type.value
-
+    
     if updated_exif:
         img.modify_exif(updated_exif)
-    if updated_xmp:
-        img.modify_xmp(updated_xmp)
-
+    
     return img.get_bytes()
-
 
 def add_altitude(picture: bytes, metadata: PictureMetadata, precision: int = 1000) -> bytes:
     """
@@ -92,7 +86,31 @@ def add_altitude(picture: bytes, metadata: PictureMetadata, precision: int = 100
 
     return img.get_bytes()
 
+def add_gps_datetime(picture: bytes, metadata: PictureMetadata) -> bytes:
+    """
+    Add GPSDateStamp and GPSTimeStamp
+    """
+    img = pyexiv2.ImageData(picture)
+    updated_exif = {}
 
+    if metadata.capture_time.utcoffset() is None:
+        metadata.capture_time = localize(metadata, img)
+
+        # for capture time, override GPSInfo time and DatetimeOriginal
+        updated_exif["Exif.Photo.DateTimeOriginal"] = metadata.capture_time.strftime("%Y:%m:%d %H:%M:%S")
+        offset = metadata.capture_time.utcoffset()
+        if offset is not None:
+            updated_exif["Exif.Photo.OffsetTimeOriginal"] = format_offset(offset)
+
+        utc_dt = metadata.capture_time.astimezone(tz=pytz.UTC)
+        updated_exif["Exif.GPSInfo.GPSDateStamp"] = utc_dt.strftime("%Y:%m:%d")
+        updated_exif["Exif.GPSInfo.GPSTimeStamp"] = utc_dt.strftime("%H/1 %M/1 %S/1")
+    
+    if updated_exif:
+        img.modify_exif(updated_exif)
+
+    return img.get_bytes()
+    
 def add_direction(picture: bytes, metadata: PictureMetadata, ref: str = 'T', precision: int = 1000) -> bytes:
     """
     Add direction value in GPSImgDirection and GPSImgDirectionRef
@@ -110,6 +128,21 @@ def add_direction(picture: bytes, metadata: PictureMetadata, ref: str = 'T', pre
 
     return img.get_bytes()
 
+def add_img_projection(picture: bytes, metadata: PictureMetadata) -> bytes:
+    """
+    Add image projection type (equirectangular for spherical image, ...) in xmp GPano.ProjectionType
+    """
+    img = pyexiv2.ImageData(picture)
+    updated_xmp = {}
+
+    if metadata.picture_type is not None:
+        updated_xmp["Xmp.GPano.ProjectionType"] = metadata.picture_type.value
+        updated_xmp["Xmp.GPano.UsePanoramaViewer"] = True
+
+    if updated_xmp:
+        img.modify_xmp(updated_xmp)
+
+    return img.get_bytes()
 
 def format_offset(offset: timedelta) -> str:
     """Format offset for OffsetTimeOriginal. Format is like "+02:00" for paris offset
