@@ -43,7 +43,7 @@ def get_image_data_from_sequences(sequences_id, mly_header):
         data = r.json()
         image_ids = data['data']
         total_image = len(image_ids)
-        print("{} images in sequence {}".format(total_image, sequence_id))
+        print("{} images in sequence {} of {}  - id : {}".format(total_image, i+1, len(sequences_id), sequence_id))
         print('getting images data')
         for x in range(0, total_image):
             image_id = image_ids[x]['id']
@@ -99,7 +99,6 @@ if __name__ == '__main__':
         date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%S.%f')
         path = 'data/{}/{}.jpg'.format(image_data['sequence_id'], date_time_image_filename)
         print(path)
-        sys.exit()
         img_metadata = writer.PictureMetadata(
                 capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
                 longitude = image_data['geometry']['coordinates'][0],
