@@ -6,10 +6,11 @@ import argparse
 from datetime import datetime
 import writer
 from model import PictureType
+import sys
 
 def parse_args(argv =None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sequence_id', type=str, help='The mapillary sequence id to download')
+    parser.add_argument('--sequence_ids', type=str, nargs='+', help='The mapillary sequence id(s) to download')
     parser.add_argument('--access_token', type=str, help='Your mapillary access token')
     parser.add_argument('--image_count', type=int, default=None, help='How many images you want to download')
 
@@ -28,6 +29,28 @@ def download(url, fn, metadata=None):
     with open(str(fn), "wb") as f:
         f.write(image)
 
+def get_single_image_data(image_id, mly_header):
+    req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
+    r = requests.get(req_url, headers=mly_header)
+    data = r.json()
+    #print(data)
+    return data
+
+def get_image_data_from_sequences(sequences_id, mly_header):
+    for i,sequence_id in enumerate(sequences_id):
+        url = 'https://graph.mapillary.com/image_ids?sequence_id={}'.format(sequence_id)
+        r = requests.get(url, headers=header)
+        data = r.json()
+        image_ids = data['data']
+        total_image = len(image_ids)
+        print("{} images in sequence {}".format(total_image, sequence_id))
+        print('getting images data')
+        for x in range(0, total_image):
+            image_id = image_ids[x]['id']
+            image_data = get_single_image_data(image_id, mly_header)
+            image_data['sequence_id'] = sequence_id
+            yield image_data
+
 def write_exif(picture, img_metadata):
     '''
     Write exif metadata
@@ -44,7 +67,7 @@ def write_exif(picture, img_metadata):
 if __name__ == '__main__':
     parse_args()
 
-    if args.sequence_id == None:
+    if args.sequence_ids == None:
         print('please provide the sequence_id')
         exit()
 
@@ -52,47 +75,37 @@ if __name__ == '__main__':
         print('please provide the access_token')
         exit()
 
-    sequence_id= args.sequence_id
+    sequence_ids= args.sequence_ids
     access_token = args.access_token
 
     # create the data folder
     if not os.path.exists('data'):
             os.makedirs('data')
 
-    # create a folder for each unique sequence ID to group images by sequence
-    if not os.path.exists('data/{}'.format(sequence_id)):
-        os.makedirs('data/{}'.format(sequence_id))
-
+    images_data = []
     header = {'Authorization' : 'OAuth {}'.format(access_token)}
-    url = 'https://graph.mapillary.com/image_ids?sequence_id={}'.format(sequence_id)
-    r = requests.get(url, headers=header)
-    data = r.json()
+    # create a folder for each unique sequence ID to group images by sequence
+    for sequence_id in sequence_ids:
+        if not os.path.exists('data/{}'.format(sequence_id)):
+            os.makedirs('data/{}'.format(sequence_id))
 
-    image_ids = data['data']
-    img_num = args.image_count if args.image_count is not None else len(image_ids)
-    urls = []
-    print(img_num)
-    print('getting urls')
-    for x in range(0, img_num):
-    #for x in range(0, 5):        
-        image_id = image_ids[x]['id']
-        req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
-        r = requests.get(req_url, headers=header)
-        data = r.json()
-        print('getting url {} of {}'.format(x, img_num))
-        #print(data)
-        urls.append(data)
+    for i,image_data in enumerate(get_image_data_from_sequences(sequence_ids, header)):
+        if args.image_count is not None and i >= args.image_count:
+            break
+        images_data.append(image_data)
 
     print('downloading.. this process will take a while. please wait')
-    for i,url in enumerate(urls):
-        date_time_image_filename = datetime.utcfromtimestamp(int(url['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%S.%f')
-        path = 'data/{}/{}.jpg'.format(sequence_id, date_time_image_filename)
+    for i,image_data in enumerate(images_data):
+        date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%S.%f')
+        path = 'data/{}/{}.jpg'.format(image_data['sequence_id'], date_time_image_filename)
+        print(path)
+        sys.exit()
         img_metadata = writer.PictureMetadata(
-                capture_time = datetime.utcfromtimestamp(int(url['captured_at'])/1000),
-                longitude = url['geometry']['coordinates'][0],
-                latitude = url['geometry']['coordinates'][1],
-                picture_type = PictureType("equirectangular") if url['camera_type'] == 'spherical' else None,
-                direction = url['compass_angle'],
-                altitude = url['altitude'],
+                capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
+                longitude = image_data['geometry']['coordinates'][0],
+                latitude = image_data['geometry']['coordinates'][1],
+                picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' else None,
+                direction = image_data['compass_angle'],
+                altitude = image_data['altitude'],
         )
-        download(url['thumb_original_url'],path, img_metadata)
+        download(image_data['thumb_original_url'],path, img_metadata)
