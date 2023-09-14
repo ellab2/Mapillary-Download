@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from requests.adapters import Retry
 import json
 import os
 import asyncio
@@ -7,6 +9,14 @@ from datetime import datetime
 import writer
 from model import PictureType
 import sys
+
+session = requests.Session()
+retries_strategies = Retry(
+    total=5,
+    backoff_factor=1,
+    status_forcelist=[429,502, 503, 504],
+    )
+session.mount('https://', HTTPAdapter(max_retries=retries_strategies))
 
 def parse_args(argv =None):
     parser = argparse.ArgumentParser()
@@ -23,16 +33,16 @@ def background(f):
     return wrapped
 
 #TODO add try/except and retry (see https://www.zenrows.com/blog/python-requests-retry#avoid-getting-blocked)
-#@background
+@background
 def download(url, fn, metadata=None):
-    r = requests.get(url, stream=True)
+    r = session.get(url, stream=True, timeout=6)
     image = write_exif(r.content, metadata)
     with open(str(fn), "wb") as f:
         f.write(image)
 
 def get_single_image_data(image_id, mly_header):
     req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
-    r = requests.get(req_url, headers=mly_header)
+    r = session.get(req_url, headers=mly_header)
     data = r.json()
     #print(data)
     return data
