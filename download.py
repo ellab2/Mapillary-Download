@@ -4,6 +4,7 @@ from requests.adapters import Retry
 import json
 import os
 import asyncio
+import concurrent.futures
 import argparse
 from datetime import datetime
 import writer
@@ -32,12 +33,11 @@ def background(f):
         return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
     return wrapped
 
-#TODO add try/except and retry (see https://www.zenrows.com/blog/python-requests-retry#avoid-getting-blocked)
-@background
-def download(url, fn, metadata=None):
+#@background
+def download(url, filepath, metadata=None):
     r = session.get(url, stream=True, timeout=6)
     image = write_exif(r.content, metadata)
-    with open(str(fn), "wb") as f:
+    with open(str(filepath), "wb") as f:
         f.write(image)
 
 def get_single_image_data(image_id, mly_header):
@@ -61,6 +61,31 @@ def get_image_data_from_sequences(sequences_id, mly_header):
             image_data = get_single_image_data(image_id, mly_header)
             image_data['sequence_id'] = sequence_id
             yield image_data
+
+def get_image_data_from_sequences__future(sequences_id, mly_header):
+    for i,sequence_id in enumerate(sequences_id):
+        url = 'https://graph.mapillary.com/image_ids?sequence_id={}'.format(sequence_id)
+        r = requests.get(url, headers=header)
+        data = r.json()
+        image_ids = data['data']
+        total_image = len(image_ids)
+        print("{} images in sequence {} of {}  - id : {}".format(total_image, i+1, len(sequences_id), sequence_id))
+        print('getting images data')
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_url = {}
+            for x in range(0, total_image):
+                image_id = image_ids[x]['id']
+                future_to_url[executor.submit(get_single_image_data, image_id, mly_header)] = image_id
+            for future in concurrent.futures.as_completed(future_to_url):
+                url = future_to_url[future]
+                image_data = future.result()
+                image_data['sequence_id'] = sequence_id
+                #print(image_data)
+                yield image_data
+            #image_data = get_single_image_data(image_id, mly_header)
+            #image_data['sequence_id'] = sequence_id
+            #yield image_data
 
 def write_exif(picture, img_metadata):
     '''
@@ -95,10 +120,12 @@ if __name__ == '__main__':
     if not os.path.exists('data'):
             os.makedirs('data')
 
-    for i,image_data in enumerate(get_image_data_from_sequences(sequence_ids, header)):
+    #for i,image_data in enumerate(get_image_data_from_sequences(sequence_ids, header)):
+    for i,image_data in enumerate(get_image_data_from_sequences__future(sequence_ids, header)):
         if args.image_limit is not None and i >= args.image_limit:
             break
         images_data.append(image_data)
+    #sys.exit()
 
     print('downloading.. this process will take a while. please wait')
     for i,image_data in enumerate(images_data):
@@ -116,4 +143,6 @@ if __name__ == '__main__':
                 direction = image_data['compass_angle'],
                 altitude = image_data['altitude'],
         )
-        download(image_data['thumb_original_url'],path, img_metadata)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            executor.submit(download, url=image_data['thumb_original_url'], filepath=path, metadata=img_metadata)
+        #download(image_data['thumb_original_url'],path, img_metadata)
