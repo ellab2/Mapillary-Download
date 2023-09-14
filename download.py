@@ -39,6 +39,7 @@ def download(url, filepath, metadata=None):
     image = write_exif(r.content, metadata)
     with open(str(filepath), "wb") as f:
         f.write(image)
+    print("{} downloaded".format(filepath))
 
 def get_single_image_data(image_id, mly_header):
     req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
@@ -128,21 +129,20 @@ if __name__ == '__main__':
     #sys.exit()
 
     print('downloading.. this process will take a while. please wait')
-    for i,image_data in enumerate(images_data):
-        # create a folder for each unique sequence ID to group images by sequence
-        if not os.path.exists('data/{}'.format(image_data['sequence_id'])):
-            os.makedirs('data/{}'.format(image_data['sequence_id']))
-        date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%Ss%f')[:-3]
-        path = 'data/{}/{}.jpg'.format(image_data['sequence_id'], date_time_image_filename)
-        print(path)
-        img_metadata = writer.PictureMetadata(
-                capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
-                longitude = image_data['geometry']['coordinates'][0],
-                latitude = image_data['geometry']['coordinates'][1],
-                picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' else None,
-                direction = image_data['compass_angle'],
-                altitude = image_data['altitude'],
-        )
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        for i,image_data in enumerate(images_data):
+            # create a folder for each unique sequence ID to group images by sequence
+            if not os.path.exists('data/{}'.format(image_data['sequence_id'])):
+                os.makedirs('data/{}'.format(image_data['sequence_id']))
+            date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%Ss%f')[:-3]
+            path = 'data/{}/{}.jpg'.format(image_data['sequence_id'], date_time_image_filename)
+            img_metadata = writer.PictureMetadata(
+                    capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
+                    longitude = image_data['geometry']['coordinates'][0],
+                    latitude = image_data['geometry']['coordinates'][1],
+                    picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' else None,
+                    direction = image_data['compass_angle'],
+                    altitude = image_data['altitude'],
+            )
             executor.submit(download, url=image_data['thumb_original_url'], filepath=path, metadata=img_metadata)
-        #download(image_data['thumb_original_url'],path, img_metadata)
+            #download(image_data['thumb_original_url'],path, img_metadata)
