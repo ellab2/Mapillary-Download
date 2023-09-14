@@ -12,7 +12,7 @@ def parse_args(argv =None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--sequence_ids', type=str, nargs='+', help='The mapillary sequence id(s) to download')
     parser.add_argument('--access_token', type=str, help='Your mapillary access token')
-    parser.add_argument('--image_count', type=int, default=None, help='How many images you want to download')
+    parser.add_argument('--image_limit', type=int, default=None, help='How many images you want to download')
 
     global args
     args = parser.parse_args(argv)
@@ -22,6 +22,7 @@ def background(f):
         return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
     return wrapped
 
+#TODO add try/except and retry (see https://www.zenrows.com/blog/python-requests-retry#avoid-getting-blocked)
 #@background
 def download(url, fn, metadata=None):
     r = requests.get(url, stream=True)
@@ -77,26 +78,24 @@ if __name__ == '__main__':
 
     sequence_ids= args.sequence_ids
     access_token = args.access_token
-
+    images_data = []
+    header = {'Authorization' : 'OAuth {}'.format(access_token)}
+    
     # create the data folder
     if not os.path.exists('data'):
             os.makedirs('data')
 
-    images_data = []
-    header = {'Authorization' : 'OAuth {}'.format(access_token)}
-    # create a folder for each unique sequence ID to group images by sequence
-    for sequence_id in sequence_ids:
-        if not os.path.exists('data/{}'.format(sequence_id)):
-            os.makedirs('data/{}'.format(sequence_id))
-
     for i,image_data in enumerate(get_image_data_from_sequences(sequence_ids, header)):
-        if args.image_count is not None and i >= args.image_count:
+        if args.image_limit is not None and i >= args.image_limit:
             break
         images_data.append(image_data)
 
     print('downloading.. this process will take a while. please wait')
     for i,image_data in enumerate(images_data):
-        date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%S.%f')
+        # create a folder for each unique sequence ID to group images by sequence
+        if not os.path.exists('data/{}'.format(image_data['sequence_id'])):
+            os.makedirs('data/{}'.format(image_data['sequence_id']))
+        date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%Ss%f')[:-3]
         path = 'data/{}/{}.jpg'.format(image_data['sequence_id'], date_time_image_filename)
         print(path)
         img_metadata = writer.PictureMetadata(
