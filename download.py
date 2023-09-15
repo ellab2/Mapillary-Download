@@ -24,6 +24,7 @@ def parse_args(argv =None):
     parser.add_argument('--sequence_ids', type=str, nargs='+', help='The mapillary sequence id(s) to download')
     parser.add_argument('--access_token', type=str, help='Your mapillary access token')
     parser.add_argument('--image_limit', type=int, default=None, help='How many images you want to download')
+    parser.add_argument('--overwrite', type=bool, default = False, help='overwrite existing images')
 
     global args
     args = parser.parse_args(argv)
@@ -144,5 +145,9 @@ if __name__ == '__main__':
                     direction = image_data['compass_angle'],
                     altitude = image_data['altitude'],
             )
+            image_exists = os.path.exists(path)
+            if not args.overwrite and image_exists:
+                print("{} already exists. Skipping ".format(path))
+                continue
             executor.submit(download, url=image_data['thumb_original_url'], filepath=path, metadata=img_metadata)
             #download(image_data['thumb_original_url'],path, img_metadata)
