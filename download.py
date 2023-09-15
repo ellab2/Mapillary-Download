@@ -24,10 +24,12 @@ def parse_args(argv =None):
     parser.add_argument('--sequence_ids', type=str, nargs='+', help='The mapillary sequence id(s) to download')
     parser.add_argument('--access_token', type=str, help='Your mapillary access token')
     parser.add_argument('--image_limit', type=int, default=None, help='How many images you want to download')
-    parser.add_argument('--overwrite', type=bool, default = False, help='overwrite existing images')
+    parser.add_argument('--overwrite', default=False, action='store_true', help='overwrite existing images')
 
     global args
     args = parser.parse_args(argv)
+    print(args)
+    sys.exit()
 
 def background(f):
     def wrapped(*args, **kwargs):
