@@ -29,7 +29,6 @@ def parse_args(argv =None):
     global args
     args = parser.parse_args(argv)
     print(args)
-    sys.exit()
 
 def background(f):
     def wrapped(*args, **kwargs):
