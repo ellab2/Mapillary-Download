@@ -135,7 +135,7 @@ if __name__ == '__main__':
     #sys.exit()
 
     print('downloading.. this process will take a while. please wait')
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         for i,image_data in enumerate(images_data):
             # create a folder for each unique sequence ID to group images by sequence
             if not os.path.exists('data/{}'.format(image_data['sequence_id'])):
