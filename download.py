@@ -127,6 +127,10 @@ if __name__ == '__main__':
     for i,image_data in enumerate(get_image_data_from_sequences__future(sequence_ids, header)):
         if args.image_limit is not None and i >= args.image_limit:
             break
+        if 'error' in image_data:
+            print("something wrong happened ! Please check your token and/or your connection")
+            print("data : ", image_data)
+            sys.exit
         images_data.append(image_data)
     #sys.exit()
 
