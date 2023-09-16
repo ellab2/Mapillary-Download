@@ -37,9 +37,9 @@ def background(f):
 
 #@background
 def download(url, filepath, metadata=None):
-    r = session.get(url, stream=True, timeout=6)
-    image = write_exif(r.content, metadata)
     with open(str(filepath), "wb") as f:
+        r = session.get(url, stream=True, timeout=6)
+        image = write_exif(r.content, metadata)
         f.write(image)
     print("{} downloaded".format(filepath))
 
