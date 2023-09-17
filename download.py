@@ -36,11 +36,13 @@ def background(f):
     return wrapped
 
 #@background
-def download(url, filepath, metadata=None):
+def download(url, filepath, metadata=None):   
+    #print(asizeof.asizeof(image)/1024, "MB")
     with open(str(filepath), "wb") as f:
         r = session.get(url, stream=True, timeout=6)
         image = write_exif(r.content, metadata)
         f.write(image)
+        #del image
     print("{} downloaded".format(filepath))
 
 def get_single_image_data(image_id, mly_header):
@@ -97,11 +99,22 @@ def write_exif(picture, img_metadata):
     #{'thumb_original_url': 'https://scontent-cdg4-2.xx.fbcdn.net/m1/v/t6/An9Zy2SrH9vXJIF01QkBODyUbg7XSKfwL48UwHyvihSwvECGjVbG0vSw9uhxe2-Dq-k2eUcigb83buO6zo-7eVbykfp5aQIe1kgd-MJr66nU_H-o_mwBLZXgVbj5I_5WX-C9c6FxJruHkV962F228O0?ccb=10-5&oh=00_AfDOKD869DxL-4ZNCbVo8Rn29vsc0JyjMAU2ctx4aAFVMQ&oe=65256C25&_nc_sid=201bca',
     #  'captured_at': 1603459736644, 'geometry': {'type': 'Point', 'coordinates': [2.5174596904057, 48.777089857534]}, 'id': '485924785946693'}
     
-    picture = writer.writePictureMetadata(picture, img_metadata)
-    picture = writer.add_altitude(picture, img_metadata)
-    picture = writer.add_direction(picture, img_metadata)
-
-    return picture
+    #picture = writer.writePictureMetadata(picture, img_metadata)
+    #picture = writer.add_altitude(picture, img_metadata)
+    #picture = writer.add_direction(picture, img_metadata)
+    image = writer.Writer(picture)
+    image.writePictureMetadata(img_metadata)
+    image.add_altitude(img_metadata)
+    image.add_direction(img_metadata)
+    image.apply()
+    import copy
+    #bb = copy.copy(updated_image.get_Bytes())
+    #updated_image.close()
+    #TODO voir si j'ai encore besoin d'une copie et d'un .close() si j'ajoute la methode __exit__ à la classe Writer
+    #return updated_image.get_Bytes()
+    updated_image = image.get_Bytes()
+    image.close()
+    return updated_image
 
 if __name__ == '__main__':
     parse_args()
