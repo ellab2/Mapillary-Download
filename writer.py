@@ -29,7 +29,7 @@ class PictureMetadata:
     orientation: Optional[int] = 1
 
 class Writer():
-    def __init__(self, picture: bytes):
+    def __init__(self, picture: bytes) -> None:
         self.content = picture
         self.image = pyexiv2.ImageData(picture)
         self.exif = self.image.read_exif()
@@ -40,20 +40,20 @@ class Writer():
     def __enter__(self):
         return self
     
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         self.image.close()
 
-    def apply(self):
+    def apply(self) -> None:
         self.image.modify_exif(self.updated_exif)
         self.image.modify_xmp(self.updated_xmp)
 
-    def close(self):
+    def close(self) -> None:
         self.image.close()
 
-    def get_Bytes(self):
+    def get_Bytes(self) -> bytes:
         return self.image.get_bytes()
     
-    def writePictureMetadata(self, metadata: PictureMetadata):
+    def writePictureMetadata(self, metadata: PictureMetadata) -> None:
         """
         Override exif metadata on raw picture and return updated bytes
         """
@@ -70,7 +70,7 @@ class Writer():
         if metadata.picture_type is not None:
             self.add_img_projection(metadata)
 
-    def add_lat_lon(self, metadata: PictureMetadata):
+    def add_lat_lon(self, metadata: PictureMetadata) -> None:
         """
         Add latitude and longitude values in GPSLatitude + GPSLAtitudeRef and GPSLongitude + GPSLongitudeRef
         """
@@ -82,7 +82,7 @@ class Writer():
             self.updated_exif["Exif.GPSInfo.GPSLongitudeRef"] = "E" if metadata.longitude > 0 else "W"
             self.updated_exif["Exif.GPSInfo.GPSLongitude"] = self._to_exif_dms(metadata.longitude)
 
-    def add_altitude(self, metadata: PictureMetadata, precision: int = 1000):
+    def add_altitude(self, metadata: PictureMetadata, precision: int = 1000) -> None:
         """
         Add altitude value in GPSAltitude and GPSAltitudeRef
         """
@@ -93,7 +93,7 @@ class Writer():
             self.updated_exif['Exif.GPSInfo.GPSAltitude'] = f"{int(abs(altitude * precision))} / {precision}"
             self.updated_exif['Exif.GPSInfo.GPSAltitudeRef'] = negative_altitude
 
-    def add_direction(self, metadata: PictureMetadata, ref: str = 'T', precision: int = 1000):
+    def add_direction(self, metadata: PictureMetadata, ref: str = 'T', precision: int = 1000) -> None:
         """
         Add direction value in GPSImgDirection and GPSImgDirectionRef
         """
@@ -103,7 +103,7 @@ class Writer():
             self.updated_exif['Exif.GPSInfo.GPSImgDirection'] = f"{int(abs(direction % 360.0 * precision))} / {precision}"
             self.updated_exif['Exif.GPSInfo.GPSImgDirectionRef'] = ref
 
-    def add_gps_datetime(self, metadata: PictureMetadata):
+    def add_gps_datetime(self, metadata: PictureMetadata) -> None:
         """
         Add GPSDateStamp and GPSTimeStamp
         """
@@ -121,7 +121,7 @@ class Writer():
             self.updated_exif["Exif.GPSInfo.GPSDateStamp"] = utc_dt.strftime("%Y:%m:%d")
             self.updated_exif["Exif.GPSInfo.GPSTimeStamp"] = utc_dt.strftime("%H/1 %M/1 %S/1")
         
-    def add_datetimeoriginal(self, metadata: PictureMetadata):
+    def add_datetimeoriginal(self, metadata: PictureMetadata) -> None:
         """
         Add date time in Exif DateTimeOriginal and SubSecTimeOriginal tags
         """
@@ -137,7 +137,7 @@ class Writer():
             if metadata.capture_time.microsecond != 0:
                 self.updated_exif["Exif.Photo.SubSecTimeOriginal"] = metadata.capture_time.strftime("%f")
 
-    def add_img_projection(self, metadata: PictureMetadata):
+    def add_img_projection(self, metadata: PictureMetadata) -> None:
         """
         Add image projection type (equirectangular for spherical image, ...) in xmp GPano.ProjectionType
         """
