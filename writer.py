@@ -109,7 +109,7 @@ class Writer():
         """
 
         if metadata.capture_time.utcoffset() is None:
-            metadata.capture_time = self.localize(metadata)
+            metadata.capture_time = self.localize(metadata.capture_time, metadata)
 
             # for capture time, override GPSInfo time and DatetimeOriginal
             self.updated_exif["Exif.Photo.DateTimeOriginal"] = metadata.capture_time.strftime("%Y:%m:%d %H:%M:%S")
@@ -127,7 +127,7 @@ class Writer():
         """
 
         if metadata.capture_time.utcoffset() is None:
-            metadata.capture_time = self.localize(metadata)
+            metadata.capture_time = self.localize(metadata.capture_time, metadata)
 
             # for capture time, override DatetimeOriginal and SubSecTimeOriginal
             self.updated_exif["Exif.Photo.DateTimeOriginal"] = metadata.capture_time.strftime("%Y:%m:%d %H:%M:%S")
@@ -157,22 +157,28 @@ class Writer():
         return f"{'+' if offset_hour >= 0 else '-'}{int(abs(offset_hour)):02}:{int(remainer/60):02}"
 
 
-    def localize(self, metadata: PictureMetadata) -> datetime:
+    def localize(self, naive_dt: datetime, metadata: PictureMetadata) -> datetime:
         """
         Localize a datetime in the timezone of the picture
         If the picture does not contains GPS position, the datetime will not be modified.
         """
-        exif = self.exif
-        try:
-            lon = exif["Exif.GPSInfo.GPSLongitude"]
-            lon_ref = exif.get("Exif.GPSInfo.GPSLongitudeRef", "E")
-            lat = exif["Exif.GPSInfo.GPSLatitude"]
-            lat_ref = exif.get("Exif.GPSInfo.GPSLatitudeRef", "N")
-        except KeyError:
-            return metadata.capture_time # canot localize, returning same date 
 
-        lon = self._from_dms(lon) * (1 if lon_ref == "E" else -1)
-        lat = self._from_dms(lat) * (1 if lat_ref == "N" else -1)
+        new_lat_lon = metadata.longitude is not None and metadata.latitude is not None
+        if new_lat_lon :
+            lon = metadata.longitude
+            lat = metadata.latitude
+
+        else:
+            exif = self.exif
+            try:
+                lon = exif["Exif.GPSInfo.GPSLongitude"]
+                lon_ref = exif.get("Exif.GPSInfo.GPSLongitudeRef", "E")
+                lat = exif["Exif.GPSInfo.GPSLatitude"]
+                lat_ref = exif.get("Exif.GPSInfo.GPSLatitudeRef", "N")
+                lon = self._from_dms(lon) * (1 if lon_ref == "E" else -1)
+                lat = self._from_dms(lat) * (1 if lat_ref == "N" else -1)
+            except KeyError:
+                return metadata.capture_time # canot localize, returning same date 
 
         tz_name = tz_finder.timezone_at(lng=lon, lat=lat)
         if not tz_name:
@@ -180,7 +186,7 @@ class Writer():
 
         tz = pytz.timezone(tz_name)
         
-        return tz.localize(metadata.capture_time)
+        return tz.localize(naive_dt)
 
 
     def _from_dms(self, val: str) -> float:

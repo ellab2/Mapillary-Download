@@ -100,7 +100,8 @@ def write_exif(picture, img_metadata):
     #  'captured_at': 1603459736644, 'geometry': {'type': 'Point', 'coordinates': [2.5174596904057, 48.777089857534]}, 'id': '485924785946693'}
     
     with writer.Writer(picture) as image:
-        image.writePictureMetadata(img_metadata)
+        image.add_datetimeoriginal(img_metadata)
+        image.add_lat_lon(img_metadata)
         image.add_altitude(img_metadata)
         image.add_direction(img_metadata)
         image.apply()
