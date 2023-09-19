@@ -23,12 +23,13 @@ def parse_args(argv =None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--sequence_ids', type=str, nargs='+', help='The mapillary sequence id(s) to download')
     parser.add_argument('--access_token', type=str, help='Your mapillary access token')
+    parser.add_argument('--destination', type=str, default='data', help='Path destination for the images')
     parser.add_argument('--image_limit', type=int, default=None, help='How many images you want to download')
     parser.add_argument('--overwrite', default=False, action='store_true', help='overwrite existing images')
 
     global args
     args = parser.parse_args(argv)
-    print(args)
+    #print(args)
 
 def background(f):
     def wrapped(*args, **kwargs):
@@ -136,7 +137,7 @@ if __name__ == '__main__':
         if 'error' in image_data:
             print("something wrong happened ! Please check your token and/or your connection")
             print("data : ", image_data)
-            sys.exit
+            sys.exit()
         images_data.append(image_data)
     #sys.exit()
 
@@ -144,10 +145,11 @@ if __name__ == '__main__':
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         for i,image_data in enumerate(images_data):
             # create a folder for each unique sequence ID to group images by sequence
-            if not os.path.exists('data/{}'.format(image_data['sequence_id'])):
-                os.makedirs('data/{}'.format(image_data['sequence_id']))
-            date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%Ss%f')[:-3]
-            path = 'data/{}/{}.jpg'.format(image_data['sequence_id'], date_time_image_filename)
+            path_destination = os.path.join(args.destination, image_data['sequence_id'])
+            if not os.path.exists(path_destination):
+                os.makedirs(path_destination)
+            date_time_image_filename = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000).strftime('%Y-%m-%d_%HH%Mmn%Ss%f')[:-3] + '.jpg'
+            path = os.path.join(path_destination, date_time_image_filename)
             img_metadata = writer.PictureMetadata(
                     capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
                     longitude = image_data['geometry']['coordinates'][0],
