@@ -73,6 +73,9 @@ def get_image_data_from_sequences__future(sequences_id, mly_header):
         url = 'https://graph.mapillary.com/image_ids?sequence_id={}'.format(sequence_id)
         r = requests.get(url, headers=header)
         data = r.json()
+        if data.get('data') == []:
+            print("Empty or wrong sequence {} of {} - id : {}".format(i+1, len(sequences_id), sequence_id))
+            continue
         image_ids = data['data']
         total_image = len(image_ids)
         print("{} images in sequence {} of {}  - id : {}".format(total_image, i+1, len(sequences_id), sequence_id))
