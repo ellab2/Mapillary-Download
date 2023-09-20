@@ -1,5 +1,5 @@
 # mapillary_download
-Simple code to download images in one or several mapillary sequences. 
+Simple code to download images in one or several mapillary sequences. The images will be geotagged and oriented.
 
 ## How to use
 change the access token with your access token and the sequence ids with the ids of the sequences you want to download
