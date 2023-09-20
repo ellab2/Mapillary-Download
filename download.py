@@ -3,7 +3,6 @@ from requests.adapters import HTTPAdapter
 from requests.adapters import Retry
 import json
 import os
-import asyncio
 import concurrent.futures
 import argparse
 from datetime import datetime
@@ -28,24 +27,17 @@ def parse_args(argv =None):
     parser.add_argument('--image_limit', type=int, default=None, help='How many images you want to download')
     parser.add_argument('--overwrite', default=False, action='store_true', help='overwrite existing images')
 
-    global args
     args = parser.parse_args(argv)
     if args.sequence_ids is None and args.image_ids is None:
         parser.error("Please enter at least one sequence id or image id")
+    return args
 
-def background(f):
-    def wrapped(*args, **kwargs):
-        return asyncio.get_event_loop().run_in_executor(None, f, *args, **kwargs)
-    return wrapped
-
-#@background
 def download(url, filepath, metadata=None):   
     #print(asizeof.asizeof(image)/1024, "MB")
     with open(str(filepath), "wb") as f:
         r = session.get(url, stream=True, timeout=6)
         image = write_exif(r.content, metadata)
         f.write(image)
-        #del image
     print("{} downloaded".format(filepath))
 
 def get_single_image_data(image_id, mly_header):
@@ -93,9 +85,6 @@ def get_image_data_from_sequences__future(sequences_id, mly_header):
                 image_data['sequence_id'] = sequence_id
                 #print(image_data)
                 yield image_data
-            #image_data = get_single_image_data(image_id, mly_header)
-            #image_data['sequence_id'] = sequence_id
-            #yield image_data
 
 def write_exif(picture, img_metadata):
     '''
@@ -115,12 +104,8 @@ def write_exif(picture, img_metadata):
     return updated_image
 
 if __name__ == '__main__':
-    parse_args()
-
-    if args.access_token == None:
-        print('please provide the access_token')
-        exit()
-
+    
+    args = parse_args()
     sequence_ids= args.sequence_ids if args.sequence_ids is not None else []
     images_ids = args.image_ids
     access_token = args.access_token
@@ -170,4 +155,3 @@ if __name__ == '__main__':
                 print("{} already exists. Skipping ".format(path))
                 continue
             executor.submit(download, url=image_data['thumb_original_url'], filepath=path, metadata=img_metadata)
-            #download(image_data['thumb_original_url'],path, img_metadata)
