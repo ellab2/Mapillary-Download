@@ -36,14 +36,14 @@ optional arguments:
 
     ![register application](./doc/snapshot_mapillary_register_application.jpg)
  - When this registration is done, click on "view" in the token column. This is you access token : 
- 
+
     ![token](./doc/snapshot_mapillary_token.jpg)
 
-## How to get my sequence id
+## How to get my sequence id (or sequence key)
 
  - Go to https://mapillary.com/app
  - Click on one of the picture of the sequence you want to download
  - Click on the "image option" button (right panel)
- - Click on "advanced" then click on the sequence id to copy it in the clipboard
+ - Click on "advanced" then click on the sequence key to copy it in the clipboard
 
     ![snapshot](./doc/snapshot_mapillary_sequence.jpg)
