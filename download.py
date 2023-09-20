@@ -21,15 +21,17 @@ session.mount('https://', HTTPAdapter(max_retries=retries_strategies))
 
 def parse_args(argv =None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sequence_ids', type=str, nargs='+', help='The mapillary sequence id(s) to download')
-    parser.add_argument('--access_token', type=str, help='Your mapillary access token')
+    parser.add_argument('access_token', type=str, help='Your mapillary access token')
+    parser.add_argument('--sequence_ids', type=str, nargs='*', help='The mapillary sequence id(s) to download')
+    parser.add_argument('--image_ids', type=int, nargs='*', help='The mapillary image id(s) to get their sequence id(s)')
     parser.add_argument('--destination', type=str, default='data', help='Path destination for the images')
     parser.add_argument('--image_limit', type=int, default=None, help='How many images you want to download')
     parser.add_argument('--overwrite', default=False, action='store_true', help='overwrite existing images')
 
     global args
     args = parser.parse_args(argv)
-    #print(args)
+    if args.sequence_ids is None and args.image_ids is None:
+        parser.error("Please enter at least one sequence id or image id")
 
 def background(f):
     def wrapped(*args, **kwargs):
@@ -47,10 +49,9 @@ def download(url, filepath, metadata=None):
     print("{} downloaded".format(filepath))
 
 def get_single_image_data(image_id, mly_header):
-    req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation'.format(image_id)
+    req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation,sequence'.format(image_id)
     r = session.get(req_url, headers=mly_header)
     data = r.json()
-    #print(data)
     return data
 
 def get_image_data_from_sequences(sequences_id, mly_header):
@@ -116,30 +117,33 @@ def write_exif(picture, img_metadata):
 if __name__ == '__main__':
     parse_args()
 
-    if args.sequence_ids == None:
-        print('please provide the sequence_id')
-        exit()
-
     if args.access_token == None:
         print('please provide the access_token')
         exit()
 
-    sequence_ids= args.sequence_ids
+    sequence_ids= args.sequence_ids if args.sequence_ids is not None else []
+    images_ids = args.image_ids
     access_token = args.access_token
     images_data = []
     header = {'Authorization' : 'OAuth {}'.format(access_token)}
-    
-    # create the data folder
-    if not os.path.exists('data'):
-            os.makedirs('data')
+
+    if images_ids:
+        for image_id in images_ids:
+            image_data = get_single_image_data(image_id, header)
+            if 'error' in image_data:
+                print("data : ", image_data)
+                print("something wrong happened ! Please check your image id and/or your connection")
+                sys.exit()
+            else:
+                sequence_ids.append(image_data.get('sequence'))
 
     #for i,image_data in enumerate(get_image_data_from_sequences(sequence_ids, header)):
     for i,image_data in enumerate(get_image_data_from_sequences__future(sequence_ids, header)):
         if args.image_limit is not None and i >= args.image_limit:
             break
         if 'error' in image_data:
-            print("something wrong happened ! Please check your token and/or your connection")
             print("data : ", image_data)
+            print("something wrong happened ! Please check your token and/or your connection")
             sys.exit()
         images_data.append(image_data)
     #sys.exit()
