@@ -40,11 +40,13 @@ def download(url, filepath, metadata=None):
         f.write(image)
     print("{} downloaded".format(filepath))
 
+
 def get_single_image_data(image_id, mly_header):
     req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation,sequence'.format(image_id)
     r = session.get(req_url, headers=mly_header)
     data = r.json()
     return data
+
 
 def get_image_data_from_sequences(sequences_id, mly_header):
     for i,sequence_id in enumerate(sequences_id):
@@ -60,6 +62,7 @@ def get_image_data_from_sequences(sequences_id, mly_header):
             image_data = get_single_image_data(image_id, mly_header)
             image_data['sequence_id'] = sequence_id
             yield image_data
+
 
 def get_image_data_from_sequences__future(sequences_id, mly_header):
     for i,sequence_id in enumerate(sequences_id):
@@ -86,6 +89,7 @@ def get_image_data_from_sequences__future(sequences_id, mly_header):
                 #print(image_data)
                 yield image_data
 
+
 def write_exif(picture, img_metadata):
     '''
     Write exif metadata
@@ -102,6 +106,7 @@ def write_exif(picture, img_metadata):
         updated_image = image.get_Bytes()
 
     return updated_image
+
 
 if __name__ == '__main__':
     

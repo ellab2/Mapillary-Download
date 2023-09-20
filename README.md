@@ -29,3 +29,21 @@ optional arguments:
                         How many images you want to download
   --overwrite           overwrite existing images
 ```
+
+## How to get my access token
+ - Go to https://www.mapillary.com/dashboard/developers
+ - Click on "Registrer Application", enter the needed informations, enable the application to "Read" data, then click on register :
+
+    ![register application](./doc/snapshot_mapillary_register_application.jpg)
+ - When this registration is done, click on "view" in the token column. This is you access token : 
+ 
+    ![token](./doc/snapshot_mapillary_token.jpg)
+
+## How to get my sequence id
+
+ - Go to https://mapillary.com/app
+ - Click on one of the picture of the sequence you want to download
+ - Click on the "image option" button (right panel)
+ - Click on "advanced" then click on the sequence id to copy it in the clipboard
+
+    ![snapshot](./doc/snapshot_mapillary_sequence.jpg)
