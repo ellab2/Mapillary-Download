@@ -4,13 +4,13 @@ Simple code to download images in one or several mapillary sequences. The images
 ## How to use
 change the access token with your access token and the sequence ids with the ids of the sequences you want to download
 ```Shell
-python download.py "MLY|xxxx|xxxxxxx" --sequence_ids xxxxxxxxxxx xxxxxxxxxxx
+python mapillary_download.py "MLY|xxxx|xxxxxxx" --sequence_ids xxxxxxxxxxx xxxxxxxxxxx
 ```
 
 ## Available arguments
 ```Shell
-python download.py -h
-usage: download.py [-h] [--sequence_ids [SEQUENCE_IDS ...]] [--image_ids [IMAGE_IDS ...]] [--destination DESTINATION]
+python mapillary_download.py -h
+usage: mapillary_download.py [-h] [--sequence_ids [SEQUENCE_IDS ...]] [--image_ids [IMAGE_IDS ...]] [--destination DESTINATION]
                    [--image_limit IMAGE_LIMIT] [--overwrite]
                    access_token
 
@@ -28,6 +28,7 @@ optional arguments:
   --image_limit IMAGE_LIMIT
                         How many images you want to download
   --overwrite           overwrite existing images
+  -v, --version         show program's version number and exit
 ```
 
 ## How to get my access token
@@ -47,3 +48,18 @@ optional arguments:
  - Click on "advanced" then click on the sequence key to copy it in the clipboard
 
     ![snapshot](./doc/snapshot_mapillary_sequence.jpg)
+
+## How to install the script with a virtual environnement
+
+```Shell
+cd ~
+git clone https://github.com/Stefal/mapillary_download.git
+cd mapillary_download
+python3 -m venv mly_venv
+source mly_venv/bin/activate
+python -m pip install -r requirements.txt
+```
+Then you can run `python mapillary_download  "MLY|xxxx|xxxxxxx" --sequence_ids xxxxxxxxxxx`
+When you're done with the script, simply run `deactivate` to exit the virtual environnement.
+
+On windows you can create a virtual environnement too, or use the prebuilt `mapillary_download.exe` available on the release page.
