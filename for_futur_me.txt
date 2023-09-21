@@ -1,0 +1,9 @@
+When you want to build a binary with pyinstaller :
+
+https://github.com/LeoHsiao1/pyexiv2/issues/87#issuecomment-1728415363
+if anyone using windows to use pyinstaller, i found the solution for it, which is the command below.
+
+you need to use --add-binary for your "exiv2.dll" and use --add-data for your "exiv2api.pyd".
+
+pyinstaller --add-binary “C:\Python310\Lib\site-packages\pyexiv2\lib\exiv2.dll;.” --add-data “C:\Python310\Lib\site-packages\pyexiv2\lib\py3.10-win\exiv2api.pyd;.” --onefile ccc.py
+
