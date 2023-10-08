@@ -102,6 +102,7 @@ def write_exif(picture, img_metadata):
         image.add_lat_lon(img_metadata)
         image.add_altitude(img_metadata)
         image.add_direction(img_metadata)
+        image.add_img_projection(img_metadata)
         image.apply()
         updated_image = image.get_Bytes()
 
