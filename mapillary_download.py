@@ -153,7 +153,7 @@ if __name__ == '__main__':
                     capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
                     longitude = image_data['geometry']['coordinates'][0],
                     latitude = image_data['geometry']['coordinates'][1],
-                    picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' or image_data['camera_type'] == 'equirectangular' else None,
+                    picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' or image_data['camera_type'] == 'equirectangular' else PictureType("flat"),
                     direction = image_data['compass_angle'],
                     altitude = image_data['altitude'],
             )
