@@ -20,6 +20,9 @@ tz_finder = timezonefinder.TimezoneFinder()
 
 @dataclass
 class PictureMetadata:
+    artist: Optional[str] = None
+    camera_make: Optional[str] = None
+    camera_model: Optional[str] = None
     capture_time: Optional[datetime] = None
     longitude: Optional[float] = None
     latitude: Optional[float] = None
@@ -146,6 +149,32 @@ class Writer():
             self.updated_xmp["Xmp.GPano.ProjectionType"] = metadata.picture_type.value
             self.updated_xmp["Xmp.GPano.UsePanoramaViewer"] = True
 
+    def add_artist(self, metadata: PictureMetadata) -> None:
+        """
+        Add image author in Exif Artist tag
+        """
+
+        if metadata.artist is not None:
+            self.updated_exif["Exif.Image.Artist"] = ascii(metadata.artist).strip("'")
+
+
+    def add_camera_make(self, metadata: PictureMetadata) -> None:
+        """
+        Add camera manufacture in Exif Make tag
+        """
+
+        if metadata.camera_make is not None:
+            self.updated_exif["Exif.Image.Make"] = ascii(metadata.camera_make).strip("'")
+
+
+    def add_camera_model(self, metadata: PictureMetadata) -> None:
+        """
+        Add camera model in Exif Model tag
+        """
+
+        if metadata.camera_model is not None:
+            self.updated_exif["Exif.Image.Model"] = ascii(metadata.camera_model).strip("'")
+
     def format_offset(self, offset: timedelta) -> str:
         """Format offset for OffsetTimeOriginal. Format is like "+02:00" for paris offset
         >>> format_offset(timedelta(hours=5, minutes=45))
@@ -155,7 +184,6 @@ class Writer():
         """
         offset_hour, remainer = divmod(offset.total_seconds(), 3600)
         return f"{'+' if offset_hour >= 0 else '-'}{int(abs(offset_hour)):02}:{int(remainer/60):02}"
-
 
     def localize(self, naive_dt: datetime, metadata: PictureMetadata) -> datetime:
         """
@@ -188,7 +216,6 @@ class Writer():
         
         return tz.localize(naive_dt)
 
-
     def _from_dms(self, val: str) -> float:
         """Convert exif lat/lon represented as degre/minute/second into decimal
         >>> _from_dms("1/1 55/1 123020/13567")
@@ -206,7 +233,6 @@ class Writer():
 
         return float(deg) + float(min) / 60 + float(sec) / 3600
 
-
     def _to_dms(self, value: float) -> Tuple[int, int, float]:
         """Return degree/minute/seconds for a decimal
         >>> _to_dms(38.889469)
@@ -222,7 +248,6 @@ class Writer():
         sec = (min - int(min)) * 60
 
         return deg, int(min), round(sec, 8)
-
 
     def _to_exif_dms(self, value: float) -> str:
         """Return degree/minute/seconds string formated for the exif metadata for a decimal

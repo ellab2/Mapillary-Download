@@ -42,10 +42,10 @@ def download(url, filepath, metadata=None):
 
 
 def get_single_image_data(image_id, mly_header):
-    req_url = 'https://graph.mapillary.com/{}?fields=thumb_original_url,altitude,camera_type,captured_at,compass_angle,geometry,exif_orientation,sequence'.format(image_id)
+    req_url = 'https://graph.mapillary.com/{}?fields=creator,thumb_original_url,altitude,make,model,camera_type,captured_at,compass_angle,geometry,exif_orientation,sequence'.format(image_id)
     r = session.get(req_url, headers=mly_header)
     data = r.json()
-    #print(data)
+    print(data)
     return data
 
 
@@ -99,6 +99,9 @@ def write_exif(picture, img_metadata):
     #  'captured_at': 1603459736644, 'geometry': {'type': 'Point', 'coordinates': [2.5174596904057, 48.777089857534]}, 'id': '485924785946693'}
     
     with writer.Writer(picture) as image:
+        image.add_artist(img_metadata)
+        image.add_camera_make(img_metadata)
+        image.add_camera_model(img_metadata)
         image.add_datetimeoriginal(img_metadata)
         image.add_lat_lon(img_metadata)
         image.add_altitude(img_metadata)
@@ -151,6 +154,9 @@ if __name__ == '__main__':
             path = os.path.join(path_destination, date_time_image_filename)
             img_metadata = writer.PictureMetadata(
                     capture_time = datetime.utcfromtimestamp(int(image_data['captured_at'])/1000),
+                    artist = image_data['creator']['username'],
+                    camera_make = image_data['make'],
+                    camera_model = image_data['model'],
                     longitude = image_data['geometry']['coordinates'][0],
                     latitude = image_data['geometry']['coordinates'][1],
                     picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' or image_data['camera_type'] == 'equirectangular' else PictureType("flat"),
