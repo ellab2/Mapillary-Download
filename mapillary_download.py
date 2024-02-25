@@ -159,7 +159,7 @@ if __name__ == '__main__':
                     camera_model = image_data['model'],
                     longitude = image_data['geometry']['coordinates'][0],
                     latitude = image_data['geometry']['coordinates'][1],
-                    picture_type = PictureType("equirectangular") if image_data['camera_type'] == 'spherical' or image_data['camera_type'] == 'equirectangular' else PictureType("flat"),
+                    picture_type = PictureType("equirectangular") if image_data.get('camera_type') == 'spherical' or image_data.get('camera_type') == 'equirectangular' else PictureType("flat"),
                     direction = image_data['compass_angle'],
                     altitude = image_data['altitude'],
             )
