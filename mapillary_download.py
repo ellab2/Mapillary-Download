@@ -1,15 +1,16 @@
+import argparse
+import concurrent.futures
+import os
+import sys
+from io import BytesIO
+
+import boto3
 import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter, Retry
-import os
-import concurrent.futures
-import argparse
-from datetime import datetime
-import sys
 
-# ---------------------------------------------------------------------------
-#  HTTP session setup (retry policy)
-# ---------------------------------------------------------------------------
+s3_client = boto3.client('s3')
+
 session = requests.Session()
 retries_strategies = Retry(
     total=5,
@@ -18,34 +19,20 @@ retries_strategies = Retry(
 )
 session.mount('https://', HTTPAdapter(max_retries=retries_strategies))
 
-# ---------------------------------------------------------------------------
-#  ARGUMENT PARSING
-# ---------------------------------------------------------------------------
+
 def parse_args(argv=None):
     parser = argparse.ArgumentParser()
 
-    df = pd.read_csv('sampled_200k_dataset.csv')
+    df = pd.read_csv('dataset.csv')
 
+
+    parser.add_argument('access_token', type=str, help='Your Mapillary access token')
     parser.add_argument(
-        'access_token',
-        nargs='?',
-        type=str,
-        default='MLY|24526089073652399|5869d326ef9e8126a7ea9c6ee5a60c2c',
-        help='Your Mapillary access token'
-    )
-    parser.add_argument(
-        '--destination',
-        type=str,
-        default='/Users/ellabaruch/PycharmProjects/mapillary_download/dataset',
-        help='Folder to save images'
-    )
+        '--destination',type=str,default='image-model-dataset',
+        help='S3 bucket name (optionally with a path prefix, e.g. my-bucket/images)')
     parser.add_argument('--sequence_ids', nargs='*', help='Sequence IDs to download')
-    parser.add_argument(
-        '--image_ids',
-        nargs='*',
-        default=df['id'].astype(str).tolist(),
-        help='Mapillary image IDs to process'
-    )
+    parser.add_argument('--image_ids',nargs='*',default=df['id'].astype(str).tolist(),
+                        help='Mapillary image IDs to process')
     parser.add_argument('--image_limit', type=int, default=None, help='Max images to download')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files if they exist')
     parser.add_argument('-v', '--version', action='version', version='release 2.0')
@@ -57,24 +44,19 @@ def parse_args(argv=None):
 
     return args
 
-# ---------------------------------------------------------------------------
-#  IMAGE DOWNLOAD
-# ---------------------------------------------------------------------------
-def download(url, filepath):
+
+def download(url, bucket_name, key_name):
     try:
         r = session.get(url, stream=True, timeout=10)
         r.raise_for_status()
-        with open(str(filepath), "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-        print(f"✅ Downloaded {filepath}")
-    except Exception as e:
-        print(f"⚠️ Failed to download {url}: {e}")
 
-# ---------------------------------------------------------------------------
-#  FETCH SINGLE IMAGE METADATA (to get URL)
-# ---------------------------------------------------------------------------
+        s3_client.upload_fileobj(BytesIO(r.content), bucket_name, key_name)
+        print(f"✅ Uploaded to s3://{bucket_name}/{key_name}")
+
+    except Exception as e:
+        print(f"⚠️ Failed to upload {url} to S3: {e}")
+
+
 def get_single_image_data(image_id, header):
     req_url = (
         f'https://graph.mapillary.com/{image_id}?fields='
@@ -88,9 +70,7 @@ def get_single_image_data(image_id, header):
         print(f"⚠️ Error fetching image {image_id}: {e}")
         return None
 
-# ---------------------------------------------------------------------------
-#  MAIN SCRIPT
-# ---------------------------------------------------------------------------
+
 if __name__ == '__main__':
     args = parse_args()
     os.makedirs(args.destination, exist_ok=True)
@@ -122,13 +102,13 @@ if __name__ == '__main__':
             if not image_data or 'thumb_original_url' not in image_data:
                 continue
 
-            filename = f"{image_data['id']}.jpg"
-            filepath = os.path.join(args.destination, filename)
+            bucket_name = "image-model-dataset"  # <-- Change this
+            key_name = f"{image_data['id']}.jpg"  # The filename inside S3
 
-            if not args.overwrite and os.path.exists(filepath):
-                print(f"Skipping existing {filepath}")
-                continue
+            # if not args.overwrite and os.path.exists(filepath):
+            #     print(f"Skipping existing {filepath}")
+            #     continue
 
-            executor.submit(download, image_data['thumb_original_url'], filepath)
+            executor.submit(download, image_data['thumb_original_url'], bucket_name, key_name)
 
     print("✅ All downloads complete!")
